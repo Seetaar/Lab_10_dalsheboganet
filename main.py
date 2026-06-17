@@ -1,5 +1,5 @@
 from models import ClientData, PredictionResponse, CSVPredictionResponse
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,8 +39,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Глобальная переменная для pipeline
 pipeline = None
 feature_config = None
+
 
 def load_feature_config():
     global feature_config
@@ -55,6 +57,7 @@ def load_feature_config():
 
 
 load_feature_config()
+
 
 @app.post("/upload-model", summary="Загрузка обученной модели", tags=["Model"])
 async def upload_model(file: UploadFile = File(...)):
@@ -86,6 +89,7 @@ async def upload_model(file: UploadFile = File(...)):
         logger.error(f"Ошибка загрузки модели: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
 
+
 @app.post("/predict", summary="Получение предсказания", tags=["Prediction"])
 async def predict(data: ClientData):
     if pipeline is None:
@@ -97,10 +101,11 @@ async def predict(data: ClientData):
 
         logger.info(f"Получены данные: {input_dict}")
 
+        # Получаем вероятность вместо предсказания
         proba = pipeline.predict_proba(df)[0]
         probability = float(proba[1] if len(proba) > 1 else proba[0])
 
-        threshold = 0.1
+        threshold = 0.2
         prediction = 1 if probability >= threshold else 0
 
         logger.info(f"Вероятность одобрения: {probability:.4f}, порог: {threshold}, предсказание: {prediction}")
@@ -117,8 +122,12 @@ async def predict(data: ClientData):
         raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
 
 
+
 @app.post("/predict-from-csv", summary="Предсказание из CSV", tags=["Prediction"])
-async def predict_from_csv(file: UploadFile = File(...)):
+async def predict_from_csv(
+    file: UploadFile = File(...),
+    return_full_dataset: bool = Query(False, description="Вернуть полный датасет с предсказаниями")
+):
     if pipeline is None:
         raise HTTPException(status_code=400, detail="Модель не загружена")
 
@@ -139,8 +148,9 @@ async def predict_from_csv(file: UploadFile = File(...)):
         else:
             X = df
 
+        # Используем predict_proba для CSV тоже
         probabilities = pipeline.predict_proba(X)[:, 1]
-        threshold = 0.1
+        threshold = 0.2
         predictions = [1 if prob >= threshold else 0 for prob in probabilities]
         df['predicted_loan_status'] = predictions
 
@@ -154,26 +164,52 @@ async def predict_from_csv(file: UploadFile = File(...)):
             except Exception as e:
                 logger.warning(f"Не удалось рассчитать ROC-AUC: {e}")
 
+        # Сохраняем полный датасет в CSV
         output_path = "artifacts/predictions.csv"
         df.to_csv(output_path, index=False)
+        logger.info(f"Датасет с предсказаниями сохранен в {output_path}")
 
+        # Формируем результат
         result = {
             "message": "Успешно",
             "rows_processed": len(df),
             "has_target": has_target,
-            "predictions_file": output_path
+            "predictions_file": output_path,
+            "timestamp": datetime.now().isoformat()
         }
 
         if roc_auc is not None:
             result['roc_auc'] = roc_auc
 
-        result['sample'] = df.head(10).to_dict(orient='records')
+        # Возвращаем полный датасет если запрошен
+        if return_full_dataset:
+            # Преобразуем DataFrame в список словарей для JSON
+            full_dataset = df.to_dict(orient='records')
+            result['full_dataset'] = full_dataset
+            result['full_dataset_rows'] = len(full_dataset)
+            logger.info(f"Возвращен полный датасет с {len(full_dataset)} строками")
+        else:
+            # Если полный датасет не запрошен, возвращаем только первые 10 строк
+            result['sample'] = df.head(10).to_dict(orient='records')
 
         return result
 
     except Exception as e:
         logger.error(f"Ошибка обработки CSV: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/download-predictions", summary="Скачать CSV с предсказаниями", tags=["Prediction"])
+async def download_predictions():
+    output_path = "artifacts/predictions.csv"
+    if os.path.exists(output_path):
+        return FileResponse(
+            output_path,
+            media_type='text/csv',
+            filename=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Файл с предсказаниями не найден")
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -185,7 +221,8 @@ async def root():
         "endpoints": [
             "POST /upload-model",
             "POST /predict",
-            "POST /predict-from-csv"
+            "POST /predict-from-csv",
+            "GET /download-predictions"
         ]
     }
 
@@ -209,6 +246,7 @@ async def model_info():
         "steps": list(pipeline.named_steps.keys()) if hasattr(pipeline, 'named_steps') else []
     }
 
+
 if os.path.exists("frontend"):
     app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
@@ -220,6 +258,7 @@ async def serve_ui():
         return FileResponse(ui_path, headers={"Cache-Control": "no-cache"})
     else:
         return {"message": "Frontend не найден"}
+
 
 if __name__ == "__main__":
     logger.info("Запуск сервера...")
