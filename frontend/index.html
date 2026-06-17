@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Сервис - Предсказание ипотеки</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2 .icon {
+            font-size: 1.3em;
+        }
+
+        .file-upload {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: block;
+            padding: 20px;
+            background: white;
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-label:hover {
+            background: #eef2ff;
+            border-color: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%);
+            font-size: 1.3em;
+            padding: 22px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(67, 233, 123, 0.4);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            width: auto;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-container label {
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        .checkbox-container .hint {
+            font-weight: normal;
+            color: #888;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 700;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .result.error {
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+            color: white;
+        }
+
+        .result.info {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+            color: white;
+        }
+
+        .result-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .result-content {
+            text-align: left;
+        }
+
+        .result-content .data-preview {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 8px;
+            color: #333;
+            font-size: 0.8em;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .result-content .data-preview pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #777;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .button-group .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 ML Сервис Ипотеки</h1>
+            <p>Предсказание одобрения кредита с помощью машинного обучения</p>
+        </div>
+
+        <div class="content">
+            <!-- Секция 1: Загрузка модели -->
+            <div class="section">
+                <h2><span class="icon">📦</span> 1. Загрузка модели</h2>
+                <div class="file-upload">
+                    <input type="file" id="modelFile" accept=".pkl" onchange="updateFileName('modelFile', 'modelName')">
+                    <label for="modelFile" class="file-label">
+                        📁 Нажмите для выбора файла модели (.pkl)
+                    </label>
+                    <div id="modelName" class="file-name"></div>
+                </div>
+                <button class="btn btn-primary" onclick="uploadModel()">
+                    Загрузить модель
+                </button>
+            </div>
+
+            <!-- Секция 2: Загрузка CSV -->
+            <div class="section">
+                <h2><span class="icon">📊</span> 2. Массовая обработка</h2>
+                <div class="file-upload">
+                    <input type="file" id="csvFile" accept=".csv" onchange="updateFileName('csvFile', 'csvName')">
+                    <label for="csvFile" class="file-label">
+                        📄 Нажмите для выбора CSV файла с данными
+                    </label>
+                    <div id="csvName" class="file-name"></div>
+                </div>
+                
+                <!-- Опция возврата полного датасета -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="returnFullDataset">
+                    <label for="returnFullDataset">
+                        Вернуть полный датасет с предсказаниями
+                        <span class="hint">(может быть большим)</span>
+                    </label>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="uploadCSV()">
+                        Обработать CSV
+                    </button>
+                    <button class="btn btn-download" onclick="downloadCSV()" style="display: none;" id="downloadCsvBtn">
+                        📥 Скачать CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Секция 3: Форма клиента -->
+            <div class="section">
+                <h2><span class="icon">👤</span> 3. Данные клиента</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Возраст (лет)</label>
+                        <input type="number" id="person_age" value="40" min="18" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Годовой доход (₽)</label>
+                        <input type="number" id="person_income" value="2000000" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Стаж работы (лет)</label>
+                        <input type="number" id="person_emp_exp" value="15" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Сумма кредита (₽)</label>
+                        <input type="number" id="loan_amnt" value="2000000" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Процентная ставка (%)</label>
+                        <input type="number" id="loan_int_rate" value="8.0" step="0.1" min="0" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Кредитный рейтинг</label>
+                        <input type="number" id="credit_score" value="800" min="300" max="850">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Кредитная история (лет)</label>
+                        <input type="number" id="cb_person_cred_hist_length" value="20" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>% дохода на кредит</label>
+                        <input type="number" id="loan_percent_income" value="0.15" step="0.01" min="0" max="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Пол</label>
+                        <select id="person_gender">
+                            <option value="male">Мужской</option>
+                            <option value="female">Женский</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Образование</label>
+                        <select id="person_education">
+                            <option value="Master">Магистр</option>
+                            <option value="Bachelor">Бакалавр</option>
+                            <option value="Doctorate">Доктор наук</option>
+                            <option value="Associate">Колледж</option>
+                            <option value="High School">Школа</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Тип жилья</label>
+                        <select id="person_home_ownership">
+                            <option value="OWN">Собственное</option>
+                            <option value="MORTGAGE">Ипотека</option>
+                            <option value="RENT">Аренда</option>
+                            <option value="OTHER">Другое</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Цель кредита</label>
+                        <select id="loan_intent">
+                            <option value="HOMEIMPROVEMENT">Ремонт</option>
+                            <option value="DEBTCONSOLIDATION">Рефинансирование</option>
+                            <option value="EDUCATION">Образование</option>
+                            <option value="MEDICAL">Медицина</option>
+                            <option value="VENTURE">Бизнес</option>
+                            <option value="PERSONAL">Личные нужды</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Предыдущие дефолты</label>
+                        <select id="previous_loan_defaults_on_file">
+                            <option value="No">Нет</option>
+                            <option value="Yes">Да</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="calculate()" style="margin-top: 30px;">
+                    🔮 Рассчитать решение
+                </button>
+            </div>
+
+            <!-- Результат -->
+            <div id="result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        function updateFileName(inputId, outputId) {
+            const input = document.getElementById(inputId);
+            const output = document.getElementById(outputId);
+            if (input.files.length > 0) {
+                output.textContent = '✓ Выбран: ' + input.files[0].name;
+            }
+        }
+
+        async function uploadModel() {
+            const fileInput = document.getElementById('modelFile');
+            const resultDiv = document.getElementById('result');
+
+            if (fileInput.files.length === 0) {
+                resultDiv.className = 'result error show';
+                resultDiv.innerHTML = '<div class="result-icon">❌</div>Выберите файл модели!';
+                return;
+            }
+
+            resultDiv.className = 'result info show';
+            resultDiv.innerHTML = '<div class="loading"></div><div style="margin-top: 15px;">Загрузка модели...</div>';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_URL}/upload-model`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success show';
+                    resultDiv.innerHTML = '<div class="result-icon">✅</div>Модель успешно загружена!';
+                } else {
+                    resultDiv.className = 'result error show';
+                    resultDiv.innerHTML = `<div class="result-icon">❌</div>Ошибка: ${data.detail}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error show';
+                resultDiv.innerHTML = '<div class="result-icon">❌</div>Ошибка соединения с сервером';
+            }
+        }
+
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const resultDiv = document.getElementById('result');
+            const returnFullDataset = document.getElementById('returnFullDataset').checked;
+
+            if (fileInput.files.length === 0) {
+                resultDiv.className = 'result error show';
+                resultDiv.innerHTML = '<div class="result-icon">❌</div>Выберите CSV файл!';
+                return;
+            }
+
+            resultDiv.className = 'result info show';
+            resultDiv.innerHTML = '<div class="loading"></div><div style="margin-top: 15px;">Обработка данных...</div>';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const url = `${API_URL}/predict-from-csv?return_full_dataset=${returnFullDataset}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    let html = '<div class="result-content">';
+                    html += '<div class="result-icon">✅</div>';
+                    html += `<div style="font-size: 1.1em; margin-bottom: 10px;">Данные успешно обработаны!</div>`;
+                    html += `<div>Обработано записей: <strong>${data.rows_processed}</strong></div>`;
+                    
+                    if (data.roc_auc !== undefined && data.roc_auc !== null) {
+                        html += `<div style="margin-top: 10px;">ROC-AUC: <strong>${data.roc_auc.toFixed(4)}</strong></div>`;
+                    }
+                    
+                    if (data.has_target) {
+                        html += `<div style="margin-top: 5px; color: #d4edda;">✓ Датасет содержит целевую переменную</div>`;
+                    } else {
+                        html += `<div style="margin-top: 5px; color: #fff3cd;">ℹ Датасет не содержит целевую переменную</div>`;
+                    }
+
+                    // Показываем полный датасет если запрошен
+                    if (returnFullDataset && data.full_dataset) {
+                        html += `<div style="margin-top: 10px;">
+                            <strong>Полный датасет получен!</strong> (${data.full_dataset_rows} строк)
+                        </div>`;
+                        
+                        // Показываем первые 3 строки для примера
+                        if (data.full_dataset.length > 0) {
+                            html += `<div class="data-preview">
+                                <strong>Пример данных (первые 3 строки):</strong>
+                                <pre>${JSON.stringify(data.full_dataset.slice(0, 3), null, 2)}</pre>
+                            </div>`;
+                            
+                            // Добавляем кнопки для скачивания
+                            html += `<div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                                <button onclick="downloadFullDatasetJSON()" class="btn btn-download">
+                                    📥 Скачать JSON
+                                </button>
+                                <button onclick="downloadFullDatasetCSV()" class="btn btn-download">
+                                    📥 Скачать CSV
+                                </button>
+                            </div>`;
+                            
+                            // Сохраняем полный датасет в глобальную переменную
+                            window.fullDataset = data.full_dataset;
+                            window.fullDatasetHeaders = Object.keys(data.full_dataset[0] || {});
+                        }
+                    } else if (data.sample) {
+                        // Показываем только семпл
+                        html += `<div class="data-preview">
+                            <strong>Пример данных (первые 10 строк):</strong>
+                            <pre>${JSON.stringify(data.sample, null, 2)}</pre>
+                        </div>`;
+                        
+                        // Показываем кнопку скачивания CSV файла
+                        html += `<div style="margin-top: 15px;">
+                            <button onclick="downloadCSV()" class="btn btn-download">
+                                📥 Скачать полный CSV файл
+                            </button>
+                        </div>`;
+                    }
+                    
+                    html += '</div>';
+                    resultDiv.className = 'result success show';
+                    resultDiv.innerHTML = html;
+                    
+                    // Показываем кнопку скачивания CSV
+                    document.getElementById('downloadCsvBtn').style.display = 'inline-block';
+                    
+                } else {
+                    resultDiv.className = 'result error show';
+                    resultDiv.innerHTML = `<div class="result-icon">❌</div>Ошибка: ${data.detail || 'Неизвестная ошибка'}`;
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                resultDiv.className = 'result error show';
+                resultDiv.innerHTML = '<div class="result-icon">❌</div>Ошибка соединения с сервером';
+            }
+        }
+
+        // Функция для скачивания полного датасета в JSON
+        function downloadFullDatasetJSON() {
+            if (!window.fullDataset) {
+                alert('Нет данных для скачивания');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(window.fullDataset, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `full_predictions_${new Date().getTime()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Функция для скачивания полного датасета в CSV
+        function downloadFullDatasetCSV() {
+            if (!window.fullDataset || !window.fullDataset.length) {
+                alert('Нет данных для скачивания');
+                return;
+            }
+
+            const headers = window.fullDatasetHeaders;
+            let csv = headers.join(',') + '\n';
+            
+            window.fullDataset.forEach(row => {
+                const values = headers.map(header => {
+                    let value = row[header];
+                    if (value === undefined || value === null) value = '';
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csv += values.join(',') + '\n';
+            });
+
+            const dataBlob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `full_predictions_${new Date().getTime()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Функция для скачивания CSV через сервер
+        async function downloadCSV() {
+            try {
+                const response = await fetch(`${API_URL}/download-predictions`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `predictions_${new Date().getTime()}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert('Файл с предсказаниями не найден');
+                }
+            } catch (error) {
+                console.error('Ошибка скачивания:', error);
+                alert('Ошибка скачивания файла');
+            }
+        }
+
+        async function calculate() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result info show';
+            resultDiv.innerHTML = '<div class="loading"></div><div style="margin-top: 15px;">Анализ данных...</div>';
+
+            const testData = {
+                person_age: parseFloat(document.getElementById('person_age').value),
+                person_income: parseFloat(document.getElementById('person_income').value),
+                person_emp_exp: parseFloat(document.getElementById('person_emp_exp').value),
+                loan_amnt: parseFloat(document.getElementById('loan_amnt').value),
+                loan_int_rate: parseFloat(document.getElementById('loan_int_rate').value),
+                loan_percent_income: parseFloat(document.getElementById('loan_percent_income').value),
+                cb_person_cred_hist_length: parseFloat(document.getElementById('cb_person_cred_hist_length').value),
+                credit_score: parseInt(document.getElementById('credit_score').value),
+                person_gender: document.getElementById('person_gender').value,
+                person_education: document.getElementById('person_education').value,
+                person_home_ownership: document.getElementById('person_home_ownership').value,
+                loan_intent: document.getElementById('loan_intent').value,
+                previous_loan_defaults_on_file: document.getElementById('previous_loan_defaults_on_file').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.loan_status === 1) {
+                        resultDiv.className = 'result success show';
+                        resultDiv.innerHTML = `
+                            <div class="result-icon">✅</div>
+                            <div style="font-size: 1.3em; margin-bottom: 10px;">ИПОТЕКА ОДОБРЕНА!</div>
+                        `;
+                    } else {
+                        resultDiv.className = 'result error show';
+                        resultDiv.innerHTML = `
+                            <div class="result-icon">❌</div>
+                            <div style="font-size: 1.3em; margin-bottom: 10px;">ОТКАЗ</div>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'result error show';
+                    resultDiv.innerHTML = `<div class="result-icon">❌</div>Ошибка: ${data.detail}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error show';
+                resultDiv.innerHTML = '<div class="result-icon">❌</div>Ошибка соединения с сервером';
+            }
+        }
+    </script>
+</body>
+</html>
